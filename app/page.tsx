@@ -1,112 +1,84 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Settings } from 'lucide-react';
+import { Sparkles, Plus, Upload } from 'lucide-react';
+import { DataProvider, useData } from '@/context/DataContext';
 import GridScan from '@/components/GridScan';
-import { TaskCard } from '@/components/TaskCard';
-import { AddTaskForm } from '@/components/AddTaskForm';
 import { TaskStats } from '@/components/TaskStats';
-import { TaskFilter } from '@/components/TaskFilter';
+import { EventsList } from '@/components/EventsList';
+import { TaskTable } from '@/components/TaskTable';
+import { EventModal } from '@/components/EventModal';
+import { TaskFormModal } from '@/components/TaskFormModal';
+import { ImportTasksModal } from '@/components/ImportTasksModal';
+import { Button } from '@/components/ui/button';
+import { Task } from '@/types';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high';
-  dueDate: string;
-  completed: boolean;
-}
+function DashboardContent() {
+  const {
+    events,
+    tasks,
+    selectedEventId,
+    addEvent,
+    deleteEvent,
+    selectEvent,
+    addTask,
+    updateTask,
+    deleteTask,
+    toggleTaskDone,
+    importTasks,
+    getEventTasks,
+    getDashboardStats,
+  } = useData();
 
-type FilterType = 'all' | 'active' | 'completed' | 'high';
-
-export default function Home() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Design UI Components',
-      description: 'Create a comprehensive component library for the TaskPing dashboard',
-      priority: 'high',
-      dueDate: '2025-02-28',
-      completed: false,
-    },
-    {
-      id: '2',
-      title: 'Implement Real-time Sync',
-      description: 'Add real-time synchronization using WebSocket for collaborative tasks',
-      priority: 'high',
-      dueDate: '2025-03-15',
-      completed: false,
-    },
-    {
-      id: '3',
-      title: 'Write Documentation',
-      description: 'Complete API documentation and user guide',
-      priority: 'medium',
-      dueDate: '2025-03-10',
-      completed: false,
-    },
-    {
-      id: '4',
-      title: 'Code Review',
-      description: 'Review pull requests from team members',
-      priority: 'medium',
-      dueDate: '2025-02-25',
-      completed: true,
-    },
-    {
-      id: '5',
-      title: 'Deploy to Production',
-      description: 'Deploy latest changes to production environment',
-      priority: 'high',
-      dueDate: '2025-03-01',
-      completed: false,
-    },
-  ]);
-
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleAddTask = (newTask: Omit<Task, 'id' | 'completed'>) => {
-    const task: Task = {
-      ...newTask,
-      id: Date.now().toString(),
-      completed: false,
-    };
-    setTasks([task, ...tasks]);
+  const eventTasks = selectedEventId ? getEventTasks(selectedEventId) : [];
+  const stats = getDashboardStats();
+
+  if (!mounted) return null;
+
+  const handleAddEvent = (name: string, date: string) => {
+    addEvent({ name, date });
   };
 
-  const handleToggleTask = (id: string) => {
-    setTasks(tasks.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task)));
+  const handleAddTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
+    addTask(task);
+    setEditingTask(null);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setShowTaskModal(true);
+  };
+
+  const handleUpdateTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
+    if (editingTask) {
+      updateTask(editingTask.id, task);
+      setEditingTask(null);
+    }
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+    deleteTask(id);
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    switch (filter) {
-      case 'active':
-        return !task.completed;
-      case 'completed':
-        return task.completed;
-      case 'high':
-        return task.priority === 'high';
-      default:
-        return true;
+  const handleImport = (importedTasks: Omit<Task, 'id' | 'createdAt' | 'status'>[]) => {
+    if (selectedEventId) {
+      const tasksWithStatus = importedTasks.map((task) => ({
+        ...task,
+        status: 'pending' as const,
+      }));
+      importTasks(tasksWithStatus, selectedEventId);
     }
-  });
-
-  const stats = {
-    total: tasks.length,
-    completed: tasks.filter((t) => t.completed).length,
-    highPriority: tasks.filter((t) => t.priority === 'high').length,
   };
-
-  if (!mounted) return null;
 
   return (
     <main className="relative w-full min-h-screen bg-background text-foreground overflow-hidden">
@@ -138,12 +110,9 @@ export default function Home() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold text-balance">TaskPing</h1>
-                  <p className="text-sm text-muted-foreground">Cosmic task management redefined</p>
+                  <p className="text-sm text-muted-foreground">Smart task management for smart teams</p>
                 </div>
               </div>
-              <button className="p-2 rounded-lg border border-border hover:bg-card transition-colors">
-                <Settings className="w-6 h-6 text-muted-foreground hover:text-foreground" />
-              </button>
             </div>
           </div>
         </header>
@@ -152,42 +121,135 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* Stats Section */}
           <div className="mb-12">
-            <h2 className="text-xl font-bold text-foreground mb-4">Your Progress</h2>
-            <TaskStats total={stats.total} completed={stats.completed} highPriority={stats.highPriority} />
+            <h2 className="text-xl font-bold text-foreground mb-4">Dashboard</h2>
+            <TaskStats {...stats} />
           </div>
 
-          {/* Add Task Section */}
-          <div className="mb-12">
-            <AddTaskForm onAdd={handleAddTask} />
-          </div>
-
-          {/* Filter Section */}
-          <div className="mb-8">
-            <TaskFilter activeFilter={filter} onFilterChange={setFilter} />
-          </div>
-
-          {/* Tasks Grid */}
-          <div>
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-16">
-                <Sparkles className="w-12 h-12 text-accent/30 mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">No tasks found. Create one to get started!</p>
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Left Sidebar - Events */}
+            <div className="lg:col-span-1">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold">Events</h2>
+                  <Button
+                    onClick={() => setShowEventModal(true)}
+                    size="sm"
+                    className="bg-accent hover:bg-accent/90"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <EventsList
+                  events={events}
+                  selectedEventId={selectedEventId}
+                  onSelect={selectEvent}
+                  onDelete={deleteEvent}
+                />
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    {...task}
-                    onToggle={handleToggleTask}
-                    onDelete={handleDeleteTask}
-                  />
-                ))}
-              </div>
-            )}
+            </div>
+
+            {/* Right Content - Tasks */}
+            <div className="lg:col-span-3">
+              {selectedEventId ? (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold">
+                      Tasks ({eventTasks.length})
+                    </h2>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setEditingTask(null);
+                          setShowTaskModal(true);
+                        }}
+                        size="sm"
+                        className="bg-accent hover:bg-accent/90"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add Task
+                      </Button>
+                      <Button
+                        onClick={() => setShowImportModal(true)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Upload className="w-4 h-4 mr-1" />
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+
+                  {eventTasks.length > 0 ? (
+                    <TaskTable
+                      tasks={eventTasks}
+                      onToggle={toggleTaskDone}
+                      onEdit={handleEditTask}
+                      onDelete={handleDeleteTask}
+                    />
+                  ) : (
+                    <div className="text-center py-12 border border-border rounded-lg">
+                      <Sparkles className="w-12 h-12 text-accent/30 mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">No tasks yet. Create your first task!</p>
+                      <Button
+                        onClick={() => {
+                          setEditingTask(null);
+                          setShowTaskModal(true);
+                        }}
+                        className="bg-accent hover:bg-accent/90"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Create Task
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-16 border border-border rounded-lg">
+                  <Sparkles className="w-12 h-12 text-accent/30 mx-auto mb-4" />
+                  <p className="text-muted-foreground text-lg mb-4">Select an event or create a new one</p>
+                  <Button
+                    onClick={() => setShowEventModal(true)}
+                    className="bg-accent hover:bg-accent/90"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create Event
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <EventModal isOpen={showEventModal} onClose={() => setShowEventModal(false)} onSubmit={handleAddEvent} />
+
+      <TaskFormModal
+        isOpen={showTaskModal}
+        onClose={() => {
+          setShowTaskModal(false);
+          setEditingTask(null);
+        }}
+        onSubmit={editingTask ? handleUpdateTask : handleAddTask}
+        initialData={editingTask || undefined}
+        eventId={selectedEventId || ''}
+      />
+
+      <ImportTasksModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSubmit={handleImport}
+        eventId={selectedEventId || ''}
+      />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <DataProvider>
+      <DashboardContent />
+    </DataProvider>
   );
 }
