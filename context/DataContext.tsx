@@ -130,6 +130,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     (tasks: Omit<Task, 'id' | 'createdAt'>[], eventId: string) => {
       const newTasks = tasks.map((task) => ({
         ...task,
+        status: task.status ?? 'pending',
         eventId,
         id: Date.now().toString() + Math.random(),
         createdAt: new Date().toISOString(),
@@ -149,9 +150,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const getDashboardStats = useCallback((): DashboardStats => {
     const now = new Date();
     const total = tasks.length;
-    const done = tasks.filter((t) => t.status === 'done').length;
+    const done = tasks.filter((t) => (t.status ?? 'pending') === 'done').length;
     const overdue = tasks.filter(
-      (t) => t.status !== 'done' && new Date(t.deadline) < now
+      (t) => (t.status ?? 'pending') !== 'done' && new Date(t.deadline) < now
     ).length;
     const pending = total - done - overdue;
 

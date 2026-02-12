@@ -37,7 +37,8 @@ export function TaskTable({ tasks, onToggle, onEdit, onDelete }: TaskTableProps)
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.assignedTo.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+      const taskStatus = task.status ?? 'pending';
+      const matchesStatus = filterStatus === 'all' || taskStatus === filterStatus;
       const matchesPriority = filterPriority === 'all' || task.priority === filterPriority;
 
       return matchesSearch && matchesStatus && matchesPriority;
@@ -58,9 +59,11 @@ export function TaskTable({ tasks, onToggle, onEdit, onDelete }: TaskTableProps)
           break;
         case 'status':
           const statusOrder = { pending: 0, overdue: 1, done: 2 };
+          const aStatus = a.status ?? 'pending';
+          const bStatus = b.status ?? 'pending';
           compareValue =
-            statusOrder[a.status as keyof typeof statusOrder] -
-            statusOrder[b.status as keyof typeof statusOrder];
+            statusOrder[aStatus as keyof typeof statusOrder] -
+            statusOrder[bStatus as keyof typeof statusOrder];
           break;
       }
 
