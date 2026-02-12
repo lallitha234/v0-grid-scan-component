@@ -195,10 +195,10 @@ export function TaskTable({ tasks, onToggle, onEdit, onDelete }: TaskTableProps)
                 <td className="px-4 py-3">
                   <span
                     className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
-                      task.status
+                      task.status || 'pending'
                     )}`}
                   >
-                    {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                    {(task.status || 'pending').charAt(0).toUpperCase() + (task.status || 'pending').slice(1)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -206,9 +206,9 @@ export function TaskTable({ tasks, onToggle, onEdit, onDelete }: TaskTableProps)
                     <button
                       onClick={() => onToggle(task.id)}
                       className="p-2 hover:bg-green-500/20 rounded-md transition-colors"
-                      title={task.status === 'done' ? 'Mark as pending' : 'Mark as done'}
+                      title={(task.status || 'pending') === 'done' ? 'Mark as pending' : 'Mark as done'}
                     >
-                      {task.status === 'done' ? (
+                      {(task.status || 'pending') === 'done' ? (
                         <Check className="w-4 h-4 text-green-400" />
                       ) : (
                         <X className="w-4 h-4 text-muted-foreground hover:text-green-400" />

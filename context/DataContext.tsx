@@ -93,6 +93,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addTask = useCallback((task: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
       ...task,
+      status: task.status || 'pending',
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
     };
